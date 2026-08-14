@@ -25502,7 +25502,7 @@
                 </div>
                 <div class="sb-foot">
                     <div id="user-badge" class="user-badge"></div>
-                    <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px">LINAH IIS v6.0 — Firebase</div>
+                    <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px">LINAH IIS v6.0 — Supabase</div>
                     <div id="fb-status" style="margin-top:4px;font-size:.68rem;font-weight:600">🔄 جاري الاتصال...</div>
                     <div id="db-cnt" style="margin-top:3px;font-size:.65rem"></div>
                 </div>
@@ -26302,7 +26302,7 @@
                                 <div id="safety-backups-list"></div>
                                 <div class="sc-hd" style="margin-top:12px">&#1587;&#1580;&#1604;&#1575;&#1604;&#1593;&#1605;&#1604;&#1610;&#1575;&#1578;</div>
                                 <div id="audit-log-list"></div>
-                                <small style="color:var(--tx3);display:block;margin-top:8px">يتم إنشاء نسخة أمان تلقائياً قبل الاستبدال أو المسح، ويتم تسجيل المستخدم والوقت ونوع العملية محلياً وعلى Firebase عند توفر الاتصال.</small>
+                                <small style="color:var(--tx3);display:block;margin-top:8px">يتم إنشاء نسخة أمان تلقائياً قبل الاستبدال أو المسح، ويتم تسجيل المستخدم والوقت ونوع العملية محلياً وعلى قاعدة البيانات عند توفر الاتصال.</small>
                             </div>
                         </div>
                         <!-- Export -->
@@ -26366,7 +26366,7 @@
                                     <button class="btn b-rd" onclick="nukeAndReimport()" style="background:#b03000;border-color:#b03000">🔄 مسح الكل + رفع من Excel</button>
                                 </div>
                                 <p style="font-size:.75rem;color:var(--tx3);margin-top:4px">
-                                    ⚠️ هذا الإجراء لا يمكن التراجع عنه — تأكد من أخذ نسخة احتياطية أولاً.<br>"مسح الكل + رفع من Excel" يمسح Firebase تماماً ثم يفتح نافذة اختيار ملف Excel جديد مباشرة.
+                                    ⚠️ هذا الإجراء لا يمكن التراجع عنه — تأكد من أخذ نسخة احتياطية أولاً.<br>"مسح الكل + رفع من Excel" يمسح قاعدة البيانات تماماً ثم يفتح نافذة اختيار ملف Excel جديد مباشرة.
               
                                 </p>
                                 <div id="nuke-reimport-status" style="display:none;margin-top:8px;font-size:.8rem;padding:8px 12px;border-radius:6px;background:var(--gbg);border:1px solid var(--gbd)"></div>
@@ -26646,7 +26646,7 @@
                                 <label style="display:block;margin:8px 0">
                                     <input type="checkbox" id="nt-trig-untreated">&#1593;&#1606;&#1583;&#1608;&#1580;&#1608;&#1583;&#1581;&#1575;&#1604;&#1577;&#1576;&#1583;&#1608;&#1606;&#1605;&#1593;&#1575;&#1605;&#1604;&#1577;
                                 </label>
-                                <div style="margin-top:12px;color:var(--tx2);font-size:.82rem;line-height:1.7">&#1575;&#1604;&#1573;&#1588;&#1593;&#1575;&#1585;&#1575;&#1578;&#1578;&#1593;&#1605;&#1604;&#1576;&#1593;&#1583;&#1581;&#1601;&#1592;&#1575;&#1604;&#1587;&#1580;&#1604;&#1608;&#1604;&#1575;&#1578;&#1608;&#1602;&#1601;&#1581;&#1601;&#1592;Firebase &#1571;&#1576;&#1583;&#1575;.</div>
+                                <div style="margin-top:12px;color:var(--tx2);font-size:.82rem;line-height:1.7">&#1575;&#1604;&#1573;&#1588;&#1593;&#1575;&#1585;&#1575;&#1578;&#1578;&#1593;&#1605;&#1604;&#1576;&#1593;&#1583;&#1581;&#1601;&#1592;&#1575;&#1604;&#1587;&#1580;&#1604;&#1608;&#1604;&#1575;&#1578;&#1608;&#1602;&#1601;&#1581;&#1601;&#1592;&#1602;&#1575;&#1593;&#1583;&#1577;&#1575;&#1604;&#1576;&#1610;&#1575;&#1606;&#1575;&#1578; &#1571;&#1576;&#1583;&#1575;.</div>
                             </div>
                             <div class="sc">
                                 <div class="sc-hd">&#128241;WhatsApp</div>
@@ -26940,7 +26940,6 @@
                 viewer: 'مشاهد'
             };
 
-            var FB_USERS_URL = 'https://linah-iis-default-rtdb.firebaseio.com/linah_farms/users.json';
             var DEFAULT_USERS = [{
                 username: 'admin',
                 password: 'admin123',
@@ -26955,14 +26954,16 @@
                 role: 'viewer'
             }];
 
-            // ── قراءة المستخدمين من Firebase أولاً، وإذا فشل يرجع للـ localStorage ──
+            // ── قراءة المستخدمين من Supabase أولاً، وإذا فشل يرجع للـ localStorage ──
             function loadUsersFromFirebase(callback) {
-                fetch(FB_USERS_URL).then(function(r) {
-                    return r.ok ? r.json() : Promise.reject(r.status);
-                }).then(function(data) {
-                    var users = Array.isArray(data) ? data : (data ? Object.values(data) : []);
+                sbGetSetting('users', function(err, data) {
+                    if (err || !data) {
+                        console.warn('Supabase users fetch failed, using localStorage:', err);
+                        callback(null, initUsersLocal());
+                        return;
+                    }
+                    var users = Array.isArray(data) ? data : Object.values(data);
                     if (!users.length) {
-                        // Firebase فارغ → ابدأ بالمستخدمين الافتراضيين
                         var local = localStorage.getItem(AUTH_KEY);
                         var localArr = [];
                         try {
@@ -26973,22 +26974,13 @@
                     }
                     localStorage.setItem(AUTH_KEY, JSON.stringify(users));
                     callback(null, users);
-                }).catch(function(err) {
-                    console.warn('Firebase users fetch failed, using localStorage:', err);
-                    callback(null, initUsersLocal());
                 });
             }
 
-            // ── حفظ المستخدمين على Firebase ──
+            // ── حفظ المستخدمين على Supabase ──
             function saveUsersToFirebase(users) {
-                fetch(FB_USERS_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(users)
-                }).catch(function(e) {
-                    console.warn('Firebase users save failed:', e);
+                sbPutSetting('users', users).catch(function(e) {
+                    console.warn('Supabase users save failed:', e);
                 });
             }
 
@@ -27036,14 +27028,8 @@
                 // مسح كل بيانات المستخدمين
                 localStorage.removeItem('linah_users');
                 localStorage.removeItem('linah_session');
-                // رفع المستخدم الافتراضي على Firebase
-                fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/users.json', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(DEFAULT_USERS)
-                }).catch(function() {});
+                // رفع المستخدم الافتراضي على Supabase
+                sbPutSetting('users', DEFAULT_USERS).catch(function() {});
                 localStorage.setItem('linah_users', JSON.stringify(DEFAULT_USERS));
                 alert('✅ تم إعادة التعيين!\n\nاسم المستخدم: admin\nكلمة المرور: Linah@2026!\n\nغيّر كلمة المرور فور دخولك.');
             }
@@ -27227,7 +27213,7 @@
                     document.getElementById('um-pw').value = '';
                     document.getElementById('um-role').value = 'viewer';
                     renderUsersTable();
-                    alert('✅ تم حفظ المستخدم على Firebase\nاسم المستخدم: ' + name + '\nكلمة المرور: ' + pw + '\nالدور: ' + (ROLE_LABELS[role] || role));
+                    alert('✅ تم حفظ المستخدم\nاسم المستخدم: ' + name + '\nكلمة المرور: ' + pw + '\nالدور: ' + (ROLE_LABELS[role] || role));
                 });
             }
 
@@ -27529,23 +27515,11 @@
             var impRaw = null;
 
             // ════════════════════════════════════════════════
-            // FIREBASE CONFIG & INIT
-            // ════════════════════════════════════════════════
-            // ════════════════════════════════════════════════
-            // FIREBASE REST API (no SDK needed — pure fetch)
-            // ════════════════════════════════════════════════
-            var FB_BASE = 'https://linah-iis-default-rtdb.firebaseio.com/linah_farms';
-            var FB_DB_URL = FB_BASE + '/db.json';
-            var FB_DD_URL = FB_BASE + '/dd.json';
-
-            // ════════════════════════════════════════════════
-            // 🟢 SUPABASE INTEGRATION LAYER
+            // 🟢 SUPABASE INTEGRATION LAYER — المصدر الوحيد للبيانات
             // ────────────────────────────────────────────────
-            // حط بيانات مشروعك هنا (Project Settings → API في Supabase):
+            // بيانات المشروع (Project Settings → API في Supabase):
             //   SUPABASE_URL      → مثال: https://xxxxxxxx.supabase.co
             //   SUPABASE_ANON_KEY → الـ anon public key
-            // طول ما القيمتين فاضيين، النظام هيفضل شغال بنفس أسلوب Firebase
-            // القديم (لحد ما تحط القيم وتفعّل Supabase).
             // ════════════════════════════════════════════════
             var SUPABASE_URL = 'https://rpjjgksqsddawqpjsnze.supabase.co';
             var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwampna3Nxc2RkYXdxcGpzbnplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MDg4ODUsImV4cCI6MjEwMjE4NDg4NX0.xkCr-JiYQR75hK1Zv0uE3BJdV6uOx-cHukQQZyP2gjo';
@@ -27673,14 +27647,139 @@
                 });
             }
 
+            // ════════════════════════════════════════════════
+            // 🟢 SUPABASE — مخزن عام للإعدادات (key/value) وجداول blob
+            //    بيحل محل كل استخدامات Firebase المتبقية (مستخدمين، DD،
+            //    مواقع القطاعات، إشعارات، تقارير، EmailJS، تتبع)
+            //    بنفس منطق GET/PUT/DELETE اللي كانت شغالة بيه على Firebase
+            // ════════════════════════════════════════════════
+            var SB_SETTINGS_TABLE = SB_REST + '/app_settings';
+
+            function sbGetSetting(key, callback) {
+                fetch(SB_SETTINGS_TABLE + '?key=eq.' + encodeURIComponent(key) + '&select=value', {
+                    headers: sbHeaders()
+                }).then(function(r) {
+                    return r.ok ? r.json() : Promise.reject(r.status);
+                }).then(function(rows) {
+                    callback(null, rows && rows.length ? rows[0].value : null);
+                }).catch(function(err) {
+                    callback(err, null);
+                });
+            }
+
+            function sbPutSetting(key, value) {
+                return fetch(SB_SETTINGS_TABLE + '?on_conflict=key', {
+                    method: 'POST',
+                    headers: sbHeaders({
+                        'Prefer': 'resolution=merge-duplicates,return=minimal'
+                    }),
+                    body: JSON.stringify([{
+                        key: key,
+                        value: value
+                    }])
+                });
+            }
+
+            function sbDeleteSetting(key) {
+                return fetch(SB_SETTINGS_TABLE + '?key=eq.' + encodeURIComponent(key), {
+                    method: 'DELETE',
+                    headers: sbHeaders()
+                });
+            }
+
+            // 🔹 جداول blob عامة (id + data JSON) — بديل مباشر لأسلوب Firebase
+            //    push-key لسجلات متعددة (تتبع، تقارير) بنفس شكل الكود القديم
+            function sbBlobList(table, callback) {
+                fetch(SB_REST + '/' + table + '?select=id,data&order=id.desc', {
+                    headers: sbHeaders()
+                }).then(function(r) {
+                    return r.ok ? r.json() : Promise.reject(r.status);
+                }).then(function(rows) {
+                    callback(null, rows || []);
+                }).catch(function(err) {
+                    callback(err, []);
+                });
+            }
+
+            function sbBlobInsert(table, data, callback) {
+                fetch(SB_REST + '/' + table, {
+                    method: 'POST',
+                    headers: sbHeaders({
+                        'Prefer': 'return=representation'
+                    }),
+                    body: JSON.stringify([{
+                        data: data
+                    }])
+                }).then(function(r) {
+                    return r.ok ? r.json() : Promise.reject(r.status);
+                }).then(function(rows) {
+                    callback(null, rows && rows[0] ? rows[0].id : null);
+                }).catch(function(err) {
+                    callback(err, null);
+                });
+            }
+
+            function sbBlobUpdate(table, id, data, callback) {
+                fetch(SB_REST + '/' + table + '?id=eq.' + encodeURIComponent(id), {
+                    method: 'PATCH',
+                    headers: sbHeaders({
+                        'Prefer': 'return=minimal'
+                    }),
+                    body: JSON.stringify({
+                        data: data
+                    })
+                }).then(function(r) {
+                    callback(r.ok ? null : r.status);
+                }).catch(function(err) {
+                    callback(err);
+                });
+            }
+
+            function sbBlobDelete(table, id, callback) {
+                fetch(SB_REST + '/' + table + '?id=eq.' + encodeURIComponent(id), {
+                    method: 'DELETE',
+                    headers: sbHeaders()
+                }).then(function(r) {
+                    callback(r.ok ? null : r.status);
+                }).catch(function(err) {
+                    callback(err);
+                });
+            }
+
+            // 🔹 شكل متوافق مع fetch() (نفس واجهة .ok/.json()) عشان الكود القديم اللي
+            //    بيستخدم sbFetchTrackingBlob() في 9 أماكن يفضل شغال من غير ما نلمس منطقه
+            function sbFetchTrackingBlob() {
+                return fetch(SB_SETTINGS_TABLE + '?key=eq.tracking&select=value', {
+                    headers: sbHeaders()
+                }).then(function(r) {
+                    if (!r.ok)
+                        return {
+                            ok: false,
+                            status: r.status,
+                            json: function() {
+                                return Promise.reject(r.status);
+                            }
+                        };
+                    return r.json().then(function(rows) {
+                        var val = (rows && rows.length) ? rows[0].value : [];
+                        return {
+                            ok: true,
+                            json: function() {
+                                return Promise.resolve(val);
+                            }
+                        };
+                    });
+                });
+            }
+
             function initSupabase() {
                 if (!SB_ENABLED)
                     return false;
                 sbFetchAllRecords(function(err, rows) {
                     if (err) {
-                        console.warn('[Supabase] تعذّر الاتصال — سيتم استخدام Firebase/local كبديل:', err);
+                        console.warn('[Supabase] تعذّر الاتصال بقاعدة السجلات:', err);
                         fbSetStatus(false);
-                        initFirebase();
+                        toast('⚠️ تعذّر الاتصال بـ Supabase — يُعرض آخر نسخة محلية محفوظة', 'e');
                         return;
                     }
                     fbSetStatus(true);
@@ -27690,7 +27789,6 @@
                             localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
                         } catch (e) {}
                     }
-                    // Supabase مفعّل ومتصل: لا نلمس Firebase إطلاقاً لتفادي أي استبدال قديم
                     computeFU();
                     initFilters();
                     applyF();
@@ -27698,6 +27796,23 @@
                     buildDash();
                     setT('db-cnt', DB.length + ' سجل');
                     console.log('✅ [Supabase] تم تحميل ' + DB.length + ' سجل من Supabase');
+                });
+                // تحميل القوائم المنسدلة (DD) من Supabase
+                sbGetSetting('dd', function(err2, val) {
+                    if (!err2 && val && typeof val === 'object') {
+                        Object.keys(val).forEach(function(k) {
+                            DD[k] = val[k];
+                        });
+                        ensurePalmCounts();
+                        try {
+                            localStorage.setItem(DD_KEY, JSON.stringify(DD));
+                        } catch (e) {}
+                    } else if (!err2) {
+                        ensurePalmCounts();
+                        sbPutSetting('dd', DD).catch(function(e) {
+                            console.warn('SB push DD:', e);
+                        });
+                    }
                 });
                 return true;
             }
@@ -27806,8 +27921,6 @@
             var DD_KEY = 'lf_v5_dd';
             var DB_BACKUPS_KEY = 'lf_v5_db_backups';
             var DB_AUDIT_KEY = 'lf_v5_audit_log';
-            var FB_BACKUPS_URL = FB_BASE + '/db_backups.json';
-            var FB_AUDIT_URL = FB_BASE + '/audit_log.json';
             var SAFETY_CONFIRM_PHRASE = 'استرجاع آمن';
 
             function getCurrentAuditUser() {
@@ -27835,13 +27948,21 @@
                     localStorage.setItem(DB_AUDIT_KEY, JSON.stringify(arr.slice(0, 200)));
                 } catch (e) {}
                 try {
-                    fetch(FB_AUDIT_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(ev)
-                    }).catch(function() {});
+                    if (SB_ENABLED) {
+                        fetch(SB_REST + '/audit_log', {
+                            method: 'POST',
+                            headers: sbHeaders({
+                                'Prefer': 'return=minimal'
+                            }),
+                            body: JSON.stringify([{
+                                event_type: action,
+                                payload: Object.assign({
+                                    user_label: ev.user,
+                                    count: ev.count
+                                }, ev.details || {})
+                            }])
+                        }).catch(function() {});
+                    }
                 } catch (e2) {}
             }
 
@@ -27863,15 +27984,8 @@
                     arr.unshift(snap);
                     localStorage.setItem(DB_BACKUPS_KEY, JSON.stringify(arr.slice(0, 25)));
                 } catch (e) {}
-                try {
-                    fetch(FB_BACKUPS_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(snap)
-                    }).catch(function() {});
-                } catch (e2) {}
+                // ملحوظة: النسخ الاحتياطية بتتخزن محليًا فقط الآن (الأمان الحقيقي
+                // للبيانات بقى على مستوى Supabase نفسه، مش نسخة يدوية إضافية).
                 auditEvent('backup_created', {
                     reason: reason || 'manual',
                     records: source.length
@@ -27958,253 +28072,9 @@
                 fbConnected = connected;
                 var ind = document.getElementById('fb-status');
                 if (ind) {
-                    ind.textContent = connected ? '🟢 Firebase متصل' : '🔴 Firebase غير متصل';
+                    ind.textContent = connected ? '🟢 متصل' : '🔴 غير متصل';
                     ind.style.color = connected ? 'var(--grn)' : 'var(--red)';
                 }
-            }
-
-            function fbGet(url, callback) {
-                fetch(url).then(function(r) {
-                    return r.ok ? r.json() : Promise.reject(r.status);
-                }).then(function(data) {
-                    callback(null, data);
-                }).catch(function(err) {
-                    callback(err, null);
-                });
-            }
-
-            function fbPut(url, data) {
-                return fetch(url, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-            }
-
-            function fbPatch(url, data) {
-                return fetch(url, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-            }
-
-            // Poll Firebase every 10 seconds for real-time-like sync
-            function startFbPolling() {
-                if (fbPollTimer)
-                    clearInterval(fbPollTimer);
-                fbPollTimer = setInterval(function() {
-                    // sync DB
-                    fbGet(FB_DB_URL, function(err, val) {
-                        if (!err && val && Array.isArray(val) && val.length) {
-                            if (fbImporting)
-                                return;
-
-                            // 🛡\ufe0f الحماية الجذرية: لا تقبل Firebase بيانات أقل من الحالية بأكثر من 5%
-                            if (DB && Array.isArray(DB) && DB.length > 0) {
-                                if (val.length < DB.length * 0.95) {
-                                    console.warn('[Polling حماية] Firebase: ' + val.length + ' سجل < DB: ' + DB.length + ' — تم الرفض. جارٍ رفع الحالي لـ Firebase للتصحيح.');
-                                    fbPut(FB_DB_URL, DB).catch(function(e) {
-                                        console.warn('[Polling]', e);
-                                    });
-                                    return;
-                                }
-                            }
-
-                            // ── فقط لو البيانات اتغيّرت فعلاً ──
-                            var newSnapshot = JSON.stringify(val);
-                            var oldSnapshot = JSON.stringify(DB);
-                            if (newSnapshot === oldSnapshot)
-                                return;
-
-                            DB = val;
-                            try {
-                                localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-                            } catch (e) {}
-
-                            // احفظ حالة الفلاتر الحالية قبل أي تحديث
-                            var savedState = captureRecordsState();
-
-                            // حدّث الـ counters والـ dashboard فقط
-                            computeFU();
-                            fillGlobalFilters();
-                            buildDash();
-
-                            var counts = {};
-                            DB.forEach(function(r) {
-                                counts[r.code] = (counts[r.code] || 0) + 1;
-                            });
-                            var repCnt = Object.values(counts).filter(function(v) {
-                                return v >= 2;
-                            }).length;
-                            setT('nb-rep', repCnt);
-                            setT('db-cnt', DB.length + ' سجل');
-
-                            // أعِد تطبيق الفلاتر القديمة بدون إعادة تهيئتها من صفر
-                            var hasFilter = savedState && savedState.values && ((savedState.values['srch'] && savedState.values['srch'] !== '') || (savedState.values['f-year'] && savedState.values['f-year'] !== '') || (savedState.values['f-month'] && savedState.values['f-month'] !== '') || (savedState.values['f-sv'] && savedState.values['f-sv'] !== '') || (savedState.values['f-dg'] && savedState.values['f-dg'] !== '') || (savedState.values['f-sc'] && savedState.values['f-sc'] !== '') || (savedState.values['f-insp'] && savedState.values['f-insp'] !== '') || (savedState.values['f-stage'] && savedState.values['f-stage'] !== ''));
-
-                            if (hasFilter) {
-                                // فيه فلتر نشط — رجّعه كما كان
-                                restoreRecordsState(savedState);
-                            } else {
-                                // مفيش فلتر — حدّث القوائم وطبّق
-                                initFilters();
-                                applyF(true);
-                            }
-                        }
-                    });
-                    fbGet(FB_DD_URL, function(err, val) {
-                        if (!err && val && typeof val === 'object') {
-                            Object.keys(val).forEach(function(k) {
-                                DD[k] = val[k];
-                            });
-                            ensurePalmCounts();
-                            try {
-                                localStorage.setItem(DD_KEY, JSON.stringify(DD));
-                            } catch (e) {}
-                        }
-                    });
-                    // Tracking لا يتحدث تلقائياً — يتحمّل فقط عند فتح التبويب يدوياً
-                }, 10000);
-            }
-
-            function initFirebase() {
-                // Test connection with a simple GET
-                fbGet(FB_DB_URL, function(err, val) {
-                    if (err) {
-                        fbSetStatus(false);
-                        console.warn('Firebase REST: غير متاح — وضع offline');
-                        return;
-                    }
-                    fbSetStatus(true);
-                    // Load DB from Firebase if it has data
-                    if (val && Array.isArray(val) && val.length) {
-                        // 🛡️ تحقق أن Firebase لا تحتوي على SEED فقط (بيانات افتراضية)
-                        var isOnlySeed = SEED && val.length <= SEED.length;
-                        var localRaw = localStorage.getItem(STORAGE_KEY);
-                        var localData = null;
-                        try {
-                            localData = localRaw ? JSON.parse(localRaw) : null;
-                        } catch (e) {}
-
-                        // إذا Firebase فيها SEED فقط والـ localStorage فيها بيانات حقيقية أكثر → استخدم الـ localStorage
-                        if (isOnlySeed && localData && Array.isArray(localData) && localData.length > val.length) {
-                            console.warn('🛡️ [Firebase] Firebase تحتوي على بيانات افتراضية فقط — تم استخدام localStorage (' + localData.length + ' سجل)');
-                            DB = localData;
-                            // ارفع البيانات الحقيقية لـ Firebase
-                            fbPut(FB_DB_URL, DB).catch(function(e) {
-                                console.warn('FB restore from local:', e);
-                            });
-                        } else if (DB && Array.isArray(DB) && DB.length > 0 && val.length < DB.length * 0.95) {
-                            // 🛡️ نفس حماية الـ polling: لا تقبل Firebase بيانات أقل من الحالية (المحمّلة من initDB) بأكثر من 5%
-                            console.warn('🛡️ [Firebase-init] Firebase: ' + val.length + ' سجل < المحلي: ' + DB.length + ' — تم الرفض. جارٍ رفع الحالي لـ Firebase للتصحيح.');
-                            fbPut(FB_DB_URL, DB).catch(function(e) {
-                                console.warn('FB correction on init:', e);
-                            });
-                        } else {
-                            DB = val;
-                            try {
-                                localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-                            } catch (e) {}
-                        }
-                        computeFU();
-                        initFilters();
-                        applyF();
-                        fillGlobalFilters();
-                        buildDash();
-                        var counts = {};
-                        DB.forEach(function(r) {
-                            counts[r.code] = (counts[r.code] || 0) + 1;
-                        });
-                        var repCnt = Object.values(counts).filter(function(v) {
-                            return v >= 2;
-                        }).length;
-                        setT('nb-rep', repCnt);
-                        setT('db-cnt', DB.length + ' سجل');
-                    } else {
-                        // 🛡️ Firebase فارغة/ممسوحة — لا ترفع SEED! ارفع البيانات الحقيقية من localStorage أو النسخ الاحتياطية
-                        var realData = null;
-
-                        // جرّب localStorage أولاً
-                        try {
-                            var lsRaw = localStorage.getItem(STORAGE_KEY);
-                            if (lsRaw) {
-                                var lsParsed = JSON.parse(lsRaw);
-                                if (Array.isArray(lsParsed) && lsParsed.length > 0)
-                                    realData = lsParsed;
-                            }
-                        } catch (e) {}
-
-                        // جرّب النسخ الاحتياطية إذا localStorage فارغة
-                        if (!realData) {
-                            var bkKeys = ['lf_v5_bk_d', 'lf_v5_bk_h', 'lf_v5_bk_w'];
-                            for (var bi2 = 0; bi2 < bkKeys.length; bi2++) {
-                                try {
-                                    var bk = JSON.parse(localStorage.getItem(bkKeys[bi2]) || 'null');
-                                    if (bk && bk.db) {
-                                        var bkArr = JSON.parse(bk.db);
-                                        if (Array.isArray(bkArr) && bkArr.length > 0) {
-                                            realData = bkArr;
-                                            break;
-                                        }
-                                    }
-                                } catch (e) {}
-                            }
-                        }
-
-                        if (realData && realData.length > 0) {
-                            // ارفع البيانات الحقيقية لـ Firebase
-                            DB = realData;
-                            fbPut(FB_DB_URL, DB).catch(function(e) {
-                                console.warn('FB restore DB:', e);
-                            });
-                            try {
-                                localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-                            } catch (e) {}
-                            console.log('🛡️ [Firebase] تم استعادة ' + DB.length + ' سجل من المخزن المحلي إلى Firebase');
-                            computeFU();
-                            initFilters();
-                            applyF();
-                            fillGlobalFilters();
-                            buildDash();
-                        } else {
-                            // لا يوجد أي بيانات حقيقية — SEED كملاذ أخير فقط
-                            console.warn('🛡️ [Firebase] لا توجد بيانات حقيقية. يُعرض تحذير للمستخدم.');
-                            setTimeout(function() {
-                                if (typeof toast === 'function') {
-                                    toast('⚠️ Firebase فارغة ولا توجد نسخة احتياطية. تأكد من استعادة بياناتك.', 'e');
-                                }
-                            }, 2000);
-                        }
-                    }
-                    // Load DD
-                    fbGet(FB_DD_URL, function(err2, ddVal) {
-                        if (!err2 && ddVal && typeof ddVal === 'object') {
-                            Object.keys(ddVal).forEach(function(k) {
-                                DD[k] = ddVal[k];
-                            });
-                            ensurePalmCounts();
-                            try {
-                                localStorage.setItem(DD_KEY, JSON.stringify(DD));
-                            } catch (e) {}
-                            if (!ddVal[PALM_COUNTS_KEY])
-                                saveDD();
-                        } else if (!err2) {
-                            ensurePalmCounts();
-                            fbPut(FB_DD_URL, DD).catch(function(e) {
-                                console.warn('FB push DD:', e);
-                            });
-                        }
-                    });
-                    startFbPolling();
-                    // Tracking يُحمَّل فقط عند فتح صفحة التتبع — لا auto-load هنا
-                });
-                return true;
-                // always return true (async)
             }
 
             function initDB() {
@@ -28293,12 +28163,15 @@
                 }
                 ensurePalmCounts();
 
-                // 🟢 لو Supabase مفعّل (SUPABASE_URL/KEY متعبّئين) استخدمه كمصدر رئيسي وآمن،
-                // وإلا ارجع لنظام Firebase القديم كما كان.
+                // 🟢 تشغيل Supabase (المصدر الوحيد للبيانات الآن)
                 if (SB_ENABLED) {
                     initSupabase();
                 } else {
-                    initFirebase();
+                    console.warn('⚠️ Supabase غير مُهيّأ — أضف SUPABASE_URL و SUPABASE_ANON_KEY.');
+                    setTimeout(function() {
+                        if (typeof toast === 'function')
+                            toast('⚠️ لم يتم إعداد الاتصال بقاعدة البيانات — البيانات المعروضة محلية فقط', 'e');
+                    }, 1500);
                 }
             }
 
@@ -28362,19 +28235,8 @@
                     return;
                 }
 
-                // 🔴 وضع Firebase القديم (Legacy) — يعمل فقط لو Supabase مش مفعّل
-                // لسه فيه خطر الاستبدال الكامل الموصوف فوق؛ فعّل Supabase بأسرع وقت.
-                clearTimeout(fbSaveTimer);
-                fbSaveTimer = setTimeout(function() {
-                    fbPut(FB_DB_URL, DB).then(function(r) {
-                        if (!r.ok)
-                            throw new Error(r.status);
-                        fbSetStatus(true);
-                    }).catch(function(err) {
-                        fbSetStatus(false);
-                        toast('⚠️ تعذّر الحفظ في Firebase — محفوظ محلياً مؤقتاً', 'w');
-                    });
-                }, 400);
+                // ⚠️ Supabase غير مُهيّأ — الحفظ محلي فقط حتى يتم إعداد SUPABASE_URL/KEY
+                console.warn('⚠️ [saveDB] Supabase غير مُهيّأ — لم يتم رفع أي بيانات لأي خادم.');
             }
 
             function saveDD() {
@@ -28383,11 +28245,8 @@
                 } catch (e) {}
                 clearTimeout(fbDDSaveTimer);
                 fbDDSaveTimer = setTimeout(function() {
-                    fbPut(FB_DD_URL, DD).then(function(r) {
-                        if (!r.ok)
-                            throw new Error(r.status);
-                    }).catch(function(err) {
-                        console.warn('DD Firebase save error:', err);
+                    sbPutSetting('dd', DD).catch(function(err) {
+                        console.warn('DD Supabase save error:', err);
                     });
                 }, 400);
             }
@@ -28819,7 +28678,6 @@
               , linahWindDate = null;
             var linahSectorEditMode = false
               , LINAH_SECTOR_COORDS_KEY = 'linah_iis_sector_coords_v1';
-            var FB_SECTOR_COORDS_URL = FB_BASE + '/sector_coords.json';
             var LINAH_SECTOR_COORDS = {
                 '1': [28.231091, 28.953395],
                 '3': [28.217592, 28.953009],
@@ -28849,19 +28707,14 @@
                 }
             }
 
-            // تحميل المواضع من Firebase وتحديث الخريطة
+            // تحميل المواضع من Supabase وتحديث الخريطة
             function loadSectorCoordsFromFirebase(callback) {
-                fetch(FB_SECTOR_COORDS_URL).then(function(r) {
-                    return r.json();
-                }).then(function(data) {
-                    if (data && typeof data === 'object') {
+                sbGetSetting('sector_coords', function(err, data) {
+                    if (!err && data && typeof data === 'object') {
                         try {
                             localStorage.setItem(LINAH_SECTOR_COORDS_KEY, JSON.stringify(data));
                         } catch (e) {}
                     }
-                    if (callback)
-                        callback();
-                }).catch(function() {
                     if (callback)
                         callback();
                 });
@@ -28875,15 +28728,9 @@
                 try {
                     localStorage.setItem(LINAH_SECTOR_COORDS_KEY, JSON.stringify(stored));
                 } catch (e) {}
-                // مزامنة مع Firebase
-                fetch(FB_SECTOR_COORDS_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(stored)
-                }).catch(function(e) {
-                    console.warn('Firebase sector coords sync failed:', e);
+                // مزامنة مع Supabase
+                sbPutSetting('sector_coords', stored).catch(function(e) {
+                    console.warn('Supabase sector coords sync failed:', e);
                 });
             }
 
@@ -28893,11 +28740,9 @@
                 try {
                     localStorage.removeItem(LINAH_SECTOR_COORDS_KEY);
                 } catch (e) {}
-                // حذف من Firebase أيضًا
-                fetch(FB_SECTOR_COORDS_URL, {
-                    method: 'DELETE'
-                }).catch(function(e) {
-                    console.warn('Firebase sector coords reset failed:', e);
+                // حذف من Supabase أيضًا
+                sbDeleteSetting('sector_coords').catch(function(e) {
+                    console.warn('Supabase sector coords reset failed:', e);
                 });
                 toast('\u062a\u0645\u062a \u0625\u0639\u0627\u062f\u0629 \u0645\u0648\u0627\u0642\u0639 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062a', 's');
                 buildDash();
@@ -31502,7 +31347,7 @@
                 if (!window._rpPerfTrackLoaded && !window._rpPerfLoading) {
                     window._rpPerfLoading = true;
                     el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx2)">⏳ جاري تحميل سجلات التتبع...</div>';
-                    fetch(FB_TRACKING_URL).then(function(r) {
+                    sbFetchTrackingBlob().then(function(r) {
                         return r.ok ? r.json() : Promise.reject(r.status);
                     }).then(function(data) {
                         window._rpPerfTrackRecs = Array.isArray(data) ? data : (data ? Object.values(data) : []);
@@ -31695,7 +31540,7 @@
                 if (!window._rpPerfTrackLoaded && !window._rpCycleLoading) {
                     window._rpCycleLoading = true;
                     el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx2)">⏳ جاري تحميل سجلات التتبع...</div>';
-                    fetch(FB_TRACKING_URL).then(function(r) {
+                    sbFetchTrackingBlob().then(function(r) {
                         return r.ok ? r.json() : Promise.reject(r.status);
                     }).then(function(data) {
                         window._rpPerfTrackRecs = Array.isArray(data) ? data : (data ? Object.values(data) : []);
@@ -32641,7 +32486,7 @@
                 var sz = (stored.length / 1024).toFixed(1);
                 var el = document.getElementById('storage-info');
                 if (el)
-                    el.innerHTML = '&#128202; عدد السجلات: <b>' + DB.length + '</b><br>' + '&#128190; حجم البيانات (محلي): <b>' + sz + ' KB</b><br>' + '&#9729; Firebase: <span id="fb-status-bk">' + (fbConnected ? '<b style="color:var(--grn)">متصل ✓</b>' : '<b style="color:var(--red)">غير متصل</b>') + '</span><br>' + '&#128336; آخر تحديث: <b>' + new Date().toLocaleString('ar-EG') + '</b><br>' + '<small style="color:var(--tx3)">&#8505; البيانات مخزنة في Firebase وlocal كنسخة احتياطية.</small>';
+                    el.innerHTML = '&#128202; عدد السجلات: <b>' + DB.length + '</b><br>' + '&#128190; حجم البيانات (محلي): <b>' + sz + ' KB</b><br>' + '&#9729; الاتصال: <span id="fb-status-bk">' + (fbConnected ? '<b style="color:var(--grn)">متصل ✓</b>' : '<b style="color:var(--red)">غير متصل</b>') + '</span><br>' + '&#128336; آخر تحديث: <b>' + new Date().toLocaleString('ar-EG') + '</b><br>' + '<small style="color:var(--tx3)">&#8505; البيانات مخزنة في قاعدة البيانات وlocal كنسخة احتياطية.</small>';
                 renderSafetyPanel();
             }
 
@@ -32813,7 +32658,7 @@
                 URL.revokeObjectURL(u);
             }
             function nukeAll() {
-                if (!requireDangerConfirm('\u062d\u0630\u0641 \u062c\u0645\u064a\u0639 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0641\u062d\u0635 \u0645\u0646 Firebase \u0648\u0627\u0644\u062c\u0647\u0627\u0632.', '\u0633\u064a\u062a\u0645 \u0623\u062e\u0630 \u0646\u0633\u062e\u0629 \u0623\u0645\u0627\u0646 \u0642\u0628\u0644 \u0627\u0644\u0645\u0633\u062d.'))
+                if (!requireDangerConfirm('\u062d\u0630\u0641 \u062c\u0645\u064a\u0639 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0641\u062d\u0635 \u0645\u0646 \u0642\u0627\u0639\u062f\u0629 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a \u0648\u0627\u0644\u062c\u0647\u0627\u0632.', '\u0633\u064a\u062a\u0645 \u0623\u062e\u0630 \u0646\u0633\u062e\u0629 \u0623\u0645\u0627\u0646 \u0642\u0628\u0644 \u0627\u0644\u0645\u0633\u062d.'))
                     return;
                 createDbSnapshot('before_delete_all', DB, {
                     records: DB.length
@@ -32829,18 +32674,7 @@
                 computeFU();
                 buildDash();
                 toast('\ud83d\uddd1\ufe0f \u062c\u0627\u0631\u064a \u0627\u0644\u0645\u0633\u062d...', 'w');
-                var nukePromise = SB_ENABLED
-                    ? sbReplaceAll([])
-                    : fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/db.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify([])
-                    }).then(function(r) {
-                        if (!r.ok)
-                            throw new Error('HTTP ' + r.status);
-                    });
+                var nukePromise = sbReplaceAll([]);
                 nukePromise.then(function() {
                     toast('\u2705 \u062a\u0645 \u0645\u0633\u062d \u062c\u0645\u064a\u0639 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a', 'e');
                 }).catch(function(err) {
@@ -32869,18 +32703,7 @@
                     st.style.color = 'var(--blu)';
                     st.innerHTML = '\ud83d\udd04 \u062c\u0627\u0631\u064a \u0627\u0644\u0645\u0633\u062d...';
                 }
-                var nukeReimportPromise = SB_ENABLED
-                    ? sbReplaceAll([])
-                    : fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/db.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify([])
-                    }).then(function(r) {
-                        if (!r.ok)
-                            throw new Error('HTTP ' + r.status);
-                    });
+                var nukeReimportPromise = sbReplaceAll([]);
                 nukeReimportPromise.then(function() {
                     if (st) {
                         st.style.color = 'var(--grn)';
@@ -33089,7 +32912,6 @@
             var NT_SETTINGS_KEY = 'linah_notification_settings_v1';
             var NT_QUEUE_KEY = 'linah_notification_queue_v1';
             var NT_SENT_KEY = 'linah_notification_sent_v1';
-            var NT_FB_URL = 'https://linah-iis-default-rtdb.firebaseio.com/linah_farms/notification_settings.json';
 
             function ntEl(id) {
                 return document.getElementById(id);
@@ -33266,11 +33088,9 @@
             function saveNotificationSettings() {
                 var s = ntCollectSettingsFromForm();
                 ntSaveLocalSettings(s);
-                if (typeof fbPut === 'function') {
-                    fbPut(NT_FB_URL, s).catch(function(e) {
-                        console.warn('Notification settings Firebase save failed:', e);
-                    });
-                }
+                sbPutSetting('notification_settings', s).catch(function(e) {
+                    console.warn('Notification settings Supabase save failed:', e);
+                });
                 toast('\u062a\u0645 \u062d\u0641\u0638 \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a', 's');
                 renderNotificationQueue();
             }
@@ -34705,7 +34525,7 @@
                         warnHtml = '<div style="margin-top:10px;background:#fffbea;border:1px solid #f0c040;border-radius:6px;padding:10px">' + '<div style="font-size:.8rem;font-weight:700;color:#7a5c00;margin-bottom:4px">\u26a0\ufe0f \u062a\u0646\u0628\u064a\u0647\u0627\u062a \u062a\u0648\u0627\u0631\u064a\u062e (' + converted.warnings.length + ')</div>' + '<div style="font-size:.73rem;color:#7a5c00;max-height:80px;overflow-y:auto;line-height:1.8">' + converted.warnings.slice(0, 8).map(escH).join('<br>') + (converted.warnings.length > 8 ? '<br>... \u0648' + (converted.warnings.length - 8) + ' \u0623\u062e\u0631\u0649' : '') + '</div></div>';
                     }
                     if (prev)
-                        prev.innerHTML = '<div style="background:var(--gbg);border:1px solid var(--gbd);border-radius:7px;padding:14px;margin-top:10px">' + '<div style="background:var(--gbd);border-radius:4px;height:6px;overflow:hidden;margin-bottom:12px"><div style="height:100%;width:100%;background:var(--grn)"></div></div>' + '<div style="font-size:.84rem;font-weight:700;color:var(--grn);margin-bottom:8px">\u2705 \u062a\u0645 \u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0645\u0644\u0641 \u0628\u0646\u062c\u0627\u062d</div>' + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;font-size:.8rem;color:var(--tx2)">' + '<div>\ud83d\udcc4 \u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0635\u0641\u0648\u0641</div><div><b>' + rows.length + '</b></div>' + '<div>\u2714\ufe0f \u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062d\u0629</div><div><b>' + converted.records.length + '</b></div>' + '<div>🔁 مكررة (موجودة)</div><div><b style="color:var(--ora)">' + dup + '</b></div>' + '<div>✏️ قابلة للتحديث</div><div><b style="color:#b06000">' + dupRows.length + '</b></div>' + '<div>🆕 جديدة للإضافة</div><div><b style="color:var(--grn)">' + newRows.length + '</b></div>' + '</div>' + warnHtml + '<div id="imp-fb-status" style="margin-top:10px;font-size:.78rem;padding:7px 10px;border-radius:5px;background:var(--bbg);border:1px solid var(--bbd);color:var(--blu)">' + '\u23f3 \u0641\u064a \u0627\u0646\u062a\u0638\u0627\u0631 \u0627\u0644\u0623\u0645\u0631 \u0644\u0631\u0641\u0639 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a \u0639\u0644\u0649 Firebase...</div>' + '</div>';
+                        prev.innerHTML = '<div style="background:var(--gbg);border:1px solid var(--gbd);border-radius:7px;padding:14px;margin-top:10px">' + '<div style="background:var(--gbd);border-radius:4px;height:6px;overflow:hidden;margin-bottom:12px"><div style="height:100%;width:100%;background:var(--grn)"></div></div>' + '<div style="font-size:.84rem;font-weight:700;color:var(--grn);margin-bottom:8px">\u2705 \u062a\u0645 \u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0645\u0644\u0641 \u0628\u0646\u062c\u0627\u062d</div>' + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;font-size:.8rem;color:var(--tx2)">' + '<div>\ud83d\udcc4 \u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0635\u0641\u0648\u0641</div><div><b>' + rows.length + '</b></div>' + '<div>\u2714\ufe0f \u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062d\u0629</div><div><b>' + converted.records.length + '</b></div>' + '<div>🔁 مكررة (موجودة)</div><div><b style="color:var(--ora)">' + dup + '</b></div>' + '<div>✏️ قابلة للتحديث</div><div><b style="color:#b06000">' + dupRows.length + '</b></div>' + '<div>🆕 جديدة للإضافة</div><div><b style="color:var(--grn)">' + newRows.length + '</b></div>' + '</div>' + warnHtml + '<div id="imp-fb-status" style="margin-top:10px;font-size:.78rem;padding:7px 10px;border-radius:5px;background:var(--bbg);border:1px solid var(--bbd);color:var(--blu)">' + '\u23f3 \u0641\u064a \u0627\u0646\u062a\u0638\u0627\u0631 \u0627\u0644\u0623\u0645\u0631 \u0644\u0631\u0641\u0639 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a...</div>' + '</div>';
                     var btn = document.getElementById('btn-imp-excel');
                     if (btn)
                         btn.style.display = newRows.length ? 'inline-flex' : 'none';
@@ -34758,18 +34578,7 @@
                 initFilters();
                 applyF();
                 // 🟢 Supabase: نرفع السجلات الجديدة فقط (upsert)، بدون لمس أي سجل قديم إطلاقاً
-                var importPromise = SB_ENABLED
-                    ? sbUpsertMany(impExcelRaw.newRows)
-                    : fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/db.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: snapshot
-                    }).then(function(r) {
-                        if (!r.ok)
-                            throw new Error('HTTP ' + r.status);
-                    });
+                var importPromise = sbUpsertMany(impExcelRaw.newRows);
                 importPromise.then(function() {
                     toast('✅ تم رفع ' + added + ' سجل جديد', 's');
                     closeImportModal();
@@ -34777,8 +34586,6 @@
                     toast('⚠️ حُفظ محلياً: ' + err.message, 'w');
                 }).finally(function() {
                     fbImporting = false;
-                    if (!SB_ENABLED)
-                        startFbPolling();
                 });
             }
 
@@ -34814,7 +34621,7 @@
                 if (st) {
                     st.style.background = 'var(--bbg)';
                     st.style.color = 'var(--blu)';
-                    st.innerHTML = '🔄 استبدال ' + total + ' سجل على Firebase...';
+                    st.innerHTML = '🔄 استبدال ' + total + ' سجل...';
                 }
                 try {
                     localStorage.setItem('lf_v5_db', snapshot);
@@ -34827,18 +34634,7 @@
                 applyF();
                 buildDash();
                 clearImportExcel();
-                var replacePromise = SB_ENABLED
-                    ? sbReplaceAll(DB)
-                    : fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/db.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: snapshot
-                    }).then(function(r) {
-                        if (!r.ok)
-                            throw new Error('HTTP ' + r.status);
-                    });
+                var replacePromise = sbReplaceAll(DB);
                 replacePromise.then(function() {
                     toast('✅ تم استبدال كل السجلات (' + total + ')', 's');
                     closeImportModal();
@@ -34846,8 +34642,6 @@
                     toast('⚠️ حُفظ محلياً: ' + err.message, 'w');
                 }).finally(function() {
                     fbImporting = false;
-                    if (!SB_ENABLED)
-                        startFbPolling();
                 });
             }
 
@@ -34880,7 +34674,7 @@
                 if (st) {
                     st.style.background = 'var(--bbg)';
                     st.style.color = 'var(--blu)';
-                    st.innerHTML = '🔄 جاري تحديث ' + updated + ' سجل (' + changedCells + ' خانة) على Firebase...';
+                    st.innerHTML = '🔄 جاري تحديث ' + updated + ' سجل (' + changedCells + ' خانة)...';
                 }
                 try {
                     localStorage.setItem('lf_v5_db', snapshot);
@@ -34895,18 +34689,7 @@
                         return ((r.code || '') + '|' + (r.inspection_date || '')) === key;
                     });
                 }).filter(Boolean);
-                var updatePromise = SB_ENABLED
-                    ? sbUpsertMany(updatedRecords)
-                    : fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/db.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: snapshot
-                    }).then(function(r) {
-                        if (!r.ok)
-                            throw new Error('HTTP ' + r.status);
-                    });
+                var updatePromise = sbUpsertMany(updatedRecords);
                 updatePromise.then(function() {
                     toast('✅ تم تحديث ' + updated + ' سجل (' + changedCells + ' خانة)', 's');
                     closeImportModal();
@@ -34921,8 +34704,6 @@
                     }
                 }).finally(function() {
                     fbImporting = false;
-                    if (!SB_ENABLED)
-                        startFbPolling();
                 });
             }
 
@@ -34988,18 +34769,7 @@
                         return ((r.code || '') + '|' + (r.inspection_date || '')) === key;
                     });
                 }).filter(Boolean) : []);
-                var addUpdatePromise = SB_ENABLED
-                    ? sbUpsertMany(touchedRecords)
-                    : fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/db.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: snapshot
-                    }).then(function(r) {
-                        if (!r.ok)
-                            throw new Error('HTTP ' + r.status);
-                    });
+                var addUpdatePromise = sbUpsertMany(touchedRecords);
                 addUpdatePromise.then(function() {
                     toast('✅ ' + added + ' سجل جديد + ' + updated + ' تحديث (' + changedCells + ' خانة)', 's');
                     closeImportModal();
@@ -35014,8 +34784,6 @@
                     }
                 }).finally(function() {
                     fbImporting = false;
-                    if (!SB_ENABLED)
-                        startFbPolling();
                 });
             }
 
@@ -35522,7 +35290,6 @@
             // ════════════════════════════════════════════════
 
             var TRACKING_KEY = 'lf_tracking_records';
-            var FB_TRACKING_URL = FB_BASE + '/tracking.json';
 
             // ── Save / Load Tracking Records ──────────────────
             var _trSaveTimer = null;
@@ -35564,21 +35331,21 @@
                 return [];
             }
 
-            // تحميل سجلات التتبع من Firebase
+            // تحميل سجلات التتبع من Supabase
             function loadTrackingFromFirebase(cb) {
-                fetch(FB_TRACKING_URL).then(function(r) {
-                    return r.ok ? r.json() : Promise.reject(r.status);
-                }).then(function(data) {
-                    var arr = Array.isArray(data) ? data : (data ? Object.values(data) : []);
+                sbGetSetting('tracking', function(err, data) {
+                    if (err || !data) {
+                        console.warn('Tracking Supabase load error:', err);
+                        if (cb)
+                            cb(getTrackingRecords());
+                        return;
+                    }
+                    var arr = Array.isArray(data) ? data : Object.values(data);
                     try {
                         localStorage.setItem(TRACKING_KEY, JSON.stringify(arr));
                     } catch (e) {}
                     if (cb)
                         cb(arr);
-                }).catch(function(err) {
-                    console.warn('Tracking Firebase load error:', err);
-                    if (cb)
-                        cb(getTrackingRecords());
                 });
             }
 
@@ -35587,18 +35354,18 @@
                 try {
                     localStorage.setItem(TRACKING_KEY, JSON.stringify(arr));
                 } catch (e) {}
-                // Firebase دايماً
+                // Supabase دايماً
                 clearTimeout(_trSaveTimer);
                 _trSaveTimer = setTimeout(function() {
-                    fbPut(FB_TRACKING_URL, arr).then(function(r) {
+                    sbPutSetting('tracking', arr).then(function(r) {
                         if (!r.ok)
                             throw new Error(r.status);
                         fbSetStatus(true);
-                        toast('☁️ تم الحفظ على Firebase', 's');
+                        toast('☁️ تم الحفظ', 's');
                     }).catch(function(e) {
                         fbSetStatus(false);
-                        console.warn('Tracking Firebase save error:', e);
-                        toast('⚠️ تعذّر حفظ التتبع في Firebase — محفوظ محلياً مؤقتاً', 'w');
+                        console.warn('Tracking Supabase save error:', e);
+                        toast('⚠️ تعذّر حفظ التتبع — محفوظ محلياً مؤقتاً', 'w');
                     });
                 }, 400);
             }
@@ -36048,10 +35815,10 @@
                 if (!el)
                     return;
                 // أظهر spinner أثناء التحميل
-                el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx2);font-size:.85rem">⏳ جاري تحميل السجلات من Firebase...</div>';
+                el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx2);font-size:.85rem">⏳ جاري تحميل السجلات...</div>';
 
                 // حمّل من Firebase دايماً — localStorage كـ fallback
-                fetch(FB_TRACKING_URL).then(function(r) {
+                sbFetchTrackingBlob().then(function(r) {
                     return r.ok ? r.json() : Promise.reject(r.status);
                 }).then(function(data) {
                     var arr = Array.isArray(data) ? data : (data ? Object.values(data) : []);
@@ -36102,7 +35869,7 @@
 
             function openTrEdit(id) {
                 // حمّل من Firebase أولاً عشان السجلات مش دايماً في localStorage
-                fetch(FB_TRACKING_URL).then(function(r) {
+                sbFetchTrackingBlob().then(function(r) {
                     return r.ok ? r.json() : Promise.reject(r.status);
                 }).then(function(data) {
                     var records = Array.isArray(data) ? data : (data ? Object.values(data) : []);
@@ -36118,7 +35885,7 @@
                         }
                     }
                     if (!rec) {
-                        toast('❌ السجل غير موجود في Firebase', 'e');
+                        toast('❌ السجل غير موجود', 'e');
                         return;
                     }
                     _fillTrEditModal(rec);
@@ -36269,7 +36036,7 @@
                 }
 
                 // حمّل من Firebase ثم عدّل
-                fetch(FB_TRACKING_URL).then(function(r) {
+                sbFetchTrackingBlob().then(function(r) {
                     return r.ok ? r.json() : Promise.reject(r.status);
                 }).then(function(data) {
                     var arr = Array.isArray(data) ? data : (data ? Object.values(data) : []);
@@ -36283,7 +36050,7 @@
                     }
                     )();
                     if (idx < 0) {
-                        toast('السجل غير موجود في Firebase', 'e');
+                        toast('السجل غير موجود', 'e');
                         return;
                     }
                     arr[idx] = {
@@ -36331,7 +36098,7 @@
             function deleteTrackingRecord(id) {
                 if (!confirm('حذف هذا السجل؟'))
                     return;
-                fetch(FB_TRACKING_URL).then(function(r) {
+                sbFetchTrackingBlob().then(function(r) {
                     return r.ok ? r.json() : Promise.reject(r.status);
                 }).then(function(data) {
                     var arr = (Array.isArray(data) ? data : (data ? Object.values(data) : [])).filter(function(r) {
@@ -36351,7 +36118,7 @@
             }
 
             function clearAllTracking() {
-                if (!confirm('حذف جميع سجلات التتبع من Firebase؟'))
+                if (!confirm('حذف جميع سجلات التتبع؟'))
                     return;
                 saveTrackingRecords([]);
                 renderTrackingList();
@@ -36400,9 +36167,9 @@
                 if (!el)
                     return;
 
-                el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--tx2);font-size:.85rem">⏳ جاري البحث في Firebase...</div>';
+                el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--tx2);font-size:.85rem">⏳ جاري البحث...</div>';
 
-                fetch(FB_TRACKING_URL).then(function(r) {
+                sbFetchTrackingBlob().then(function(r) {
                     return r.ok ? r.json() : Promise.reject(r.status);
                 }).then(function(data) {
                     var records = Array.isArray(data) ? data : (data ? Object.values(data) : []);
@@ -36499,8 +36266,8 @@
             // ════════════════════════════════════════════════
 
             function exportTrackingExcel() {
-                toast('⏳ جاري تحميل البيانات من Firebase...', 'i');
-                fetch(FB_TRACKING_URL).then(function(r) {
+                toast('⏳ جاري تحميل البيانات...', 'i');
+                sbFetchTrackingBlob().then(function(r) {
                     return r.ok ? r.json() : Promise.reject(r.status);
                 }).then(function(data) {
                     var arr = Array.isArray(data) ? data : (data ? Object.values(data) : []);
@@ -36760,13 +36527,13 @@
                     return;
                 var toAdd = prev._toAdd;
                 // حمّل الموجود من Firebase ثم ادمج
-                fetch(FB_TRACKING_URL).then(function(r) {
+                sbFetchTrackingBlob().then(function(r) {
                     return r.ok ? r.json() : Promise.reject(r.status);
                 }).then(function(data) {
                     var existing = Array.isArray(data) ? data : (data ? Object.values(data) : []);
                     var merged = existing.concat(toAdd);
                     saveTrackingRecords(merged);
-                    toast('✅ تم استيراد ' + toAdd.length + ' سجل جديد على Firebase', 's');
+                    toast('✅ تم استيراد ' + toAdd.length + ' سجل جديد', 's');
                     cancelImportTracking();
                     renderTrackingList();
                 }).catch(function() {
@@ -37467,8 +37234,6 @@
         <script>
             (function() {
                 'use strict';
-                var RC_FB_PATH = 'https://linah-iis-default-rtdb.firebaseio.com/linah_farms/report_configs.json';
-                var RC_FB_BASE = 'https://linah-iis-default-rtdb.firebaseio.com/linah_farms/report_configs';
                 var _pendingDeleteId = null;
 
                 function rcGetCurrentUser() {
@@ -37551,60 +37316,42 @@
                 }
 
                 function rcFetchAll(callback) {
-                    fetch(RC_FB_PATH).then(function(r) {
-                        return r.ok ? r.json() : Promise.reject('HTTP ' + r.status);
-                    }).then(function(data) {
-                        var configs = [];
-                        if (data && typeof data === 'object') {
-                            Object.keys(data).forEach(function(k) {
-                                if (data[k])
-                                    configs.push(Object.assign({}, data[k], {
-                                        _fbKey: k
-                                    }));
+                    sbBlobList('report_configs_blob', function(err, rows) {
+                        if (err)
+                            return callback(err, []);
+                        var configs = rows.map(function(row) {
+                            return Object.assign({}, row.data, {
+                                _fbKey: String(row.id)
                             });
-                        }
+                        });
                         configs.sort(function(a, b) {
                             return (b.created_at || '').localeCompare(a.created_at || '');
                         });
                         callback(null, configs);
-                    }).catch(function(err) {
-                        callback(err, []);
                     });
                 }
 
                 function rcSaveToFirebase(config, callback) {
-                    var url, method;
-                    if (config._fbKey) {
-                        url = RC_FB_BASE + '/' + config._fbKey + '.json';
-                        method = 'PUT';
-                    } else {
-                        url = RC_FB_PATH;
-                        method = 'POST';
-                    }
                     var body = Object.assign({}, config);
                     delete body._fbKey;
-                    fetch(url, {
-                        method: method,
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(body)
-                    }).then(function(r) {
-                        return r.ok ? r.json() : Promise.reject('HTTP ' + r.status);
-                    }).then(function(resp) {
-                        callback(null, resp);
-                    }).catch(function(err) {
-                        callback(err);
-                    });
+                    if (config._fbKey) {
+                        sbBlobUpdate('report_configs_blob', config._fbKey, body, function(err) {
+                            callback(err || null, {
+                                name: config._fbKey
+                            });
+                        });
+                    } else {
+                        sbBlobInsert('report_configs_blob', body, function(err, id) {
+                            callback(err || null, {
+                                name: id != null ? String(id) : null
+                            });
+                        });
+                    }
                 }
 
                 function rcDeleteFromFirebase(fbKey, callback) {
-                    fetch(RC_FB_BASE + '/' + fbKey + '.json', {
-                        method: 'DELETE'
-                    }).then(function(r) {
-                        return r.ok ? callback(null) : callback('HTTP ' + r.status);
-                    }).catch(function(err) {
-                        callback(err);
+                    sbBlobDelete('report_configs_blob', fbKey, function(err) {
+                        callback(err || null);
                     });
                 }
 
@@ -38060,12 +37807,22 @@
                 window.rcToggleActive = function(fbKey, newState) {
                     if (!rcAssertAdmin())
                         return;
-                    fetch(RC_FB_BASE + '/' + fbKey + '/is_active.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(newState)
+                    fetch(SB_REST + '/report_configs_blob?id=eq.' + encodeURIComponent(fbKey) + '&select=data', {
+                        headers: sbHeaders()
+                    }).then(function(r) {
+                        return r.ok ? r.json() : Promise.reject(r.status);
+                    }).then(function(rows) {
+                        var data = (rows && rows[0] && rows[0].data) ? rows[0].data : {};
+                        data.is_active = newState;
+                        return fetch(SB_REST + '/report_configs_blob?id=eq.' + encodeURIComponent(fbKey), {
+                            method: 'PATCH',
+                            headers: sbHeaders({
+                                'Prefer': 'return=minimal'
+                            }),
+                            body: JSON.stringify({
+                                data: data
+                            })
+                        });
                     }).then(function(r) {
                         if (r.ok)
                             rcLoadConfigs();
@@ -38109,8 +37866,6 @@
 
                 // ── EmailJS Settings ──────────────────────────────────────────────
                 var EJS_STORAGE_KEY = 'linah_ejs_settings';
-                var EJS_FB_URL = 'https://linah-iis-default-rtdb.firebaseio.com/linah_farms/emailjs_settings.json';
-                var EJS_FB_ROOT_URL = 'https://linah-iis-default-rtdb.firebaseio.com/emailjs_settings.json';
 
                 function ejsLoadSettings() {
                     try {
@@ -38134,24 +37889,13 @@
 
                 function ejsGetSettings(callback) {
                     var cached = ejsLoadSettings();
-                    function read(url) {
-                        return fetch(url + '?_=' + Date.now(), {
-                            cache: 'no-store'
-                        }).then(function(r) {
-                            return r.ok ? r.json() : Promise.reject('HTTP ' + r.status);
-                        });
-                    }
-                    read(EJS_FB_URL).catch(function() {
-                        return read(EJS_FB_ROOT_URL);
-                    }).then(function(data) {
+                    sbGetSetting('emailjs_settings', function(err, data) {
                         var s = data && data.serviceId && data.templateId && data.publicKey ? data : null;
                         if (s) {
                             ejsCacheSettings(s);
-                            callback(s, 'firebase');
+                            callback(s, 'supabase');
                             return;
                         }
-                        callback(cached || null, cached ? 'local' : 'none');
-                    }).catch(function() {
                         callback(cached || null, cached ? 'local' : 'none');
                     });
                 }
@@ -38183,11 +37927,11 @@
                 function ejsFillSettings() {
                     if (!rcIsAdmin())
                         return;
-                    var st = ejsSetStatus('جارٍ تحميل إعدادات البريد من Firebase…', 'ok');
+                    var st = ejsSetStatus('جارٍ تحميل إعدادات البريد…', 'ok');
                     ejsGetSettings(function(s, source) {
                         if (s) {
                             ejsApplySettingsToForm(s);
-                            st = ejsSetStatus(source === 'firebase' ? '✅ تم تحميل إعدادات البريد من Firebase' : '⚠️ تم تحميل نسخة محلية، لم يتم الوصول إلى Firebase', 'ok');
+                            st = ejsSetStatus(source === 'supabase' ? '✅ تم تحميل إعدادات البريد' : '⚠️ تم تحميل نسخة محلية فقط', 'ok');
                             setTimeout(function() {
                                 if (st)
                                     st.style.display = 'none';
@@ -38218,35 +37962,17 @@
                         updated_by: user ? (user.username || user.name || 'admin') : 'admin'
                     };
                     ejsCacheSettings(settings);
-                    st = ejsSetStatus('جارٍ الحفظ في Firebase…', 'ok');
-                    fetch(EJS_FB_URL, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(settings)
-                    }).then(function(r) {
+                    st = ejsSetStatus('جارٍ الحفظ…', 'ok');
+                    sbPutSetting('emailjs_settings', settings).then(function(r) {
                         if (!r.ok)
                             throw new Error('HTTP ' + r.status);
-                        return r.json();
-                    }).then(function() {
-                        return fetch(EJS_FB_ROOT_URL, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(settings)
-                        }).catch(function() {
-                            return null;
-                        });
-                    }).then(function() {
-                        st = ejsSetStatus('✅ تم حفظ إعدادات البريد في Firebase وستظهر على أجهزة المشرفين', 'ok');
+                        st = ejsSetStatus('✅ تم حفظ إعدادات البريد وستظهر على أجهزة المشرفين', 'ok');
                         setTimeout(function() {
                             if (st)
                                 st.style.display = 'none';
                         }, 3500);
                     }).catch(function(err) {
-                        ejsSetStatus('⚠️ تعذر الحفظ في Firebase، تم حفظ نسخة على هذا الجهاز فقط: ' + err.message, 'err');
+                        ejsSetStatus('⚠️ تعذر الحفظ، تم حفظ نسخة على هذا الجهاز فقط: ' + err.message, 'err');
                     });
                 }
                 ;
@@ -38288,23 +38014,17 @@
                                 console.warn('RC: DB load error', e);
                             }
 
-                            // If DB empty, try fetching from Firebase directly
+                            // If DB empty, try fetching from Supabase directly
                             if (!DB.length) {
-                                var fbUrl = 'https://linah-iis-default-rtdb.firebaseio.com/linah_farms/db.json';
                                 rcShowLoading(true);
-                                fetch(fbUrl).then(function(r) {
-                                    return r.json();
-                                }).then(function(data) {
-                                    if (Array.isArray(data) && data.length) {
-                                        DB = data;
+                                sbFetchAllRecords(function(err, rows) {
+                                    if (!err && rows && rows.length) {
+                                        DB = rows;
                                         rcDoSend(cfg, DB, fbKey, s);
                                     } else {
                                         rcShowLoading(false);
                                         alert('⚠️ لا توجد بيانات في قاعدة البيانات لإرسالها.');
                                     }
-                                }).catch(function(e) {
-                                    rcShowLoading(false);
-                                    alert('❌ فشل تحميل البيانات من Firebase: ' + e.message);
                                 });
                                 return;
                                 // will continue in callback
@@ -38318,7 +38038,7 @@
                 function rcShowLoading(show) {
                     var st = rcEl('rc-list-status');
                     if (st) {
-                        st.textContent = show ? '⏳ جارٍ تحميل البيانات من Firebase…' : '';
+                        st.textContent = show ? '⏳ جارٍ تحميل البيانات…' : '';
                     }
                 }
 
@@ -38875,12 +38595,8 @@
                         loadPreview(DB);
                         return;
                     }
-                    fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/db.json').then(function(r) {
-                        return r.json();
-                    }).then(function(data) {
-                        loadPreview(Array.isArray(data) ? data : []);
-                    }).catch(function(e) {
-                        alert('فشل تحميل البيانات: ' + e.message);
+                    sbFetchAllRecords(function(err, rows) {
+                        loadPreview(!err && rows ? rows : []);
                     });
                 }
                 window.rcPreviewReport = rcPreviewReport;
@@ -38941,13 +38657,10 @@
                                 if (failed > 0)
                                     msg += ' (فشل ' + failed + ')';
                                 alert(msg);
-                                fetch('https://linah-iis-default-rtdb.firebaseio.com/linah_farms/report_configs/' + fbKey + '/last_sent.json', {
-                                    method: 'PUT',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify(new Date().toISOString())
-                                });
+                                cfg.last_sent = new Date().toISOString();
+                                var cfgToSave = Object.assign({}, cfg);
+                                delete cfgToSave._fbKey;
+                                sbBlobUpdate('report_configs_blob', fbKey, cfgToSave, function() {});
                                 rcLoadConfigs();
                             }
                         }, function(err) {
@@ -39370,25 +39083,12 @@
                     console.log('[Watcher ✅] المراقبة مفعّلة');
                 }
 
-                /* ── مزامنة Firebase ── */
-                var FB_BASE = 'https://linah-iis-default-rtdb.firebaseio.com/linah_farms';
-                function fbSync() {
-                    var db = gl(KEYS.DB);
-                    if (!db)
-                        return;
-                    fetch(FB_BASE + '/db.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: db
-                    }).then(function(r) {
-                        if (r.ok)
-                            console.log('[Firebase ✅] مزامنة ناجحة');
-                    }).catch(function(e) {
-                        console.warn('[Firebase ⚠️]', e.message);
-                    });
-                }
+                /* ── مزامنة السجلات: تتم تلقائياً وبشكل آمن (سجل بسجل) عبر Supabase
+                   من خلال saveDB() الرئيسية — لا حاجة لمزامنة يدوية هنا.
+                   ملحوظة: كانت هنا سابقاً دالة fbSync بتاخد كل بيانات localStorage
+                   وتبعتها PUT كاملة فوق Firebase كل 15 دقيقة — وده كان مصدر إضافي
+                   لمشكلة اختفاء البيانات (استبدال دوري في الخلفية). اتشالت لأنها
+                   خطر حقيقي ومش لازمة مع أسلوب الحفظ الجديد. ── */
 
                 /* ── بناء القائمة ── */
                 /* ════════════════════════════════════════════════════════════
@@ -39813,7 +39513,6 @@
 
                     schedule();
                     watch();
-                    setInterval(fbSync, 15 * 60 * 1000);
                     LocalExport.scheduleDaily();
                     // تحميل محلي يومي 8:00 صباحاً
                     GDrive.scheduleDaily();
@@ -39825,7 +39524,6 @@
                 window.BackupSystem = Backup;
                 window.LocalExport = LocalExport;
                 window.GDrive = GDrive;
-                window.syncFirebase = fbSync;
 
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', init);
