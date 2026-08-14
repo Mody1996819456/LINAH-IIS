@@ -1,8 +1,11 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-build="2026-08-14-1">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Expires" content="0">
         <title>LINAH IIS — V33</title>
         <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -11,7 +14,7 @@
         <script src="https://cdn.jsdelivr.net/gh/python-visualization/folium@main/folium/templates/leaflet_heat.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
-        <!-- Firebase REST API — no external SDK needed -->
+        <!-- Supabase REST API — no external SDK needed -->
         <!-- EmailJS SDK for sending email reports -->
         <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
         <script type="application/json" id="seed-recs">
@@ -25368,6 +25371,26 @@
         </style>
     </head>
     <body>
+        <script>
+            // ── طبقة حماية إضافية: لو المتصفح عرض نسخة قديمة محفوظة (كاش)
+            //    من الصفحة، الكود ده بيتأكد من السيرفر مباشرة (بدون كاش)
+            //    ولو لقى نسخة أحدث، بيعمل تحديث فوري تلقائي للصفحة. ──
+            (function() {
+                try {
+                    var myBuild = document.documentElement.getAttribute('data-build');
+                    fetch(location.pathname + '?_v=' + Date.now(), {
+                        cache: 'no-store'
+                    }).then(function(r) {
+                        return r.text();
+                    }).then(function(html) {
+                        var m = html.match(/data-build="([^"]+)"/);
+                        if (m && m[1] && m[1] !== myBuild) {
+                            location.reload();
+                        }
+                    }).catch(function() {});
+                } catch (e) {}
+            })();
+        </script>
         <!-- ══════ LOGIN OVERLAY ══════ -->
         <div id="login-overlay">
             <div class="login-box">
@@ -32680,11 +32703,15 @@
                 URL.revokeObjectURL(u);
             }
             function nukeAll() {
-                if (!requireDangerConfirm('\u062d\u0630\u0641 \u062c\u0645\u064a\u0639 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0641\u062d\u0635 \u0645\u0646 \u0642\u0627\u0639\u062f\u0629 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a \u0648\u0627\u0644\u062c\u0647\u0627\u0632.', '\u0633\u064a\u062a\u0645 \u0623\u062e\u0630 \u0646\u0633\u062e\u0629 \u0623\u0645\u0627\u0646 \u0642\u0628\u0644 \u0627\u0644\u0645\u0633\u062d.'))
+                if (!requireDangerConfirm('\u062d\u0630\u0641 \u062c\u0645\u064a\u0639 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0641\u062d\u0635 \u0645\u0646 \u0642\u0627\u0639\u062f\u0629 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a \u0648\u0627\u0644\u062c\u0647\u0627\u0632.', '\u0633\u064a\u062a\u0645 \u062a\u062d\u0645\u064a\u0644 \u0646\u0633\u062e\u0629 \u0628\u064a\u0627\u0646\u0627\u062a \u0639\u0644\u0649 \u062c\u0647\u0627\u0632\u0643 \u0642\u0628\u0644 \u0627\u0644\u0645\u0633\u062d.'))
                     return;
-                createDbSnapshot('before_delete_all', DB, {
-                    records: DB.length
-                });
+                // 🟢 تحميل نسخة JSON كاملة على الجهاز قبل أي حذف — الضمان الحقيقي
+                if (window.LocalExport && typeof window.LocalExport.download === 'function') {
+                    window.LocalExport.download('before_delete_all');
+                } else {
+                    toast('⚠️ تعذّر تحميل نسخة الأمان — العملية أُلغيت', 'e');
+                    return;
+                }
                 auditEvent('delete_all', {
                     before: DB.length
                 });
@@ -32704,11 +32731,15 @@
                 });
             }
             function nukeAndReimport() {
-                if (!requireDangerConfirm('\u0645\u0633\u062d \u0627\u0644\u0643\u0644 \u062b\u0645 \u0631\u0641\u0639 Excel \u062c\u062f\u064a\u062f.', '\u0633\u064a\u062a\u0645 \u0623\u062e\u0630 \u0646\u0633\u062e\u0629 \u0623\u0645\u0627\u0646 \u0642\u0628\u0644 \u0627\u0644\u0645\u0633\u062d.'))
+                if (!requireDangerConfirm('\u0645\u0633\u062d \u0627\u0644\u0643\u0644 \u062b\u0645 \u0631\u0641\u0639 Excel \u062c\u062f\u064a\u062f.', '\u0633\u064a\u062a\u0645 \u062a\u062d\u0645\u064a\u0644 \u0646\u0633\u062e\u0629 \u0628\u064a\u0627\u0646\u0627\u062a \u0639\u0644\u0649 \u062c\u0647\u0627\u0632\u0643 \u0642\u0628\u0644 \u0627\u0644\u0645\u0633\u062d.'))
                     return;
-                createDbSnapshot('before_delete_all_reimport', DB, {
-                    records: DB.length
-                });
+                // 🟢 تحميل نسخة JSON كاملة على الجهاز قبل أي حذف — الضمان الحقيقي
+                if (window.LocalExport && typeof window.LocalExport.download === 'function') {
+                    window.LocalExport.download('before_delete_all_reimport');
+                } else {
+                    toast('⚠️ تعذّر تحميل نسخة الأمان — العملية أُلغيت', 'e');
+                    return;
+                }
                 auditEvent('delete_all_reimport_start', {
                     before: DB.length
                 });
