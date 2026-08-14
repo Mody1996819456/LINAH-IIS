@@ -27578,6 +27578,18 @@
 
             // 🔹 حفظ/تحديث سجل واحد فقط — UPSERT حقيقي على مستوى الصف
             //    ده اللي بيحل مشكلة "استبدال قاعدة البيانات كلها" نهائياً
+            // 🔹 يستخرج رسالة الخطأ الحقيقية من رد Supabase (مش بس رقم HTTP)
+            function sbErrorFromResponse(r) {
+                return r.text().then(function(txt) {
+                    var detail = txt;
+                    try {
+                        var j = JSON.parse(txt);
+                        detail = j.message || j.hint || j.details || txt;
+                    } catch (e) {}
+                    return new Error('HTTP ' + r.status + (detail ? ': ' + detail : ''));
+                });
+            }
+
             function sbUpsertRecord(rec) {
                 return fetch(SB_TABLE_RECORDS + '?on_conflict=id', {
                     method: 'POST',
@@ -27585,6 +27597,12 @@
                         'Prefer': 'resolution=merge-duplicates,return=minimal'
                     }),
                     body: JSON.stringify([rec])
+                }).then(function(r) {
+                    if (r.ok)
+                        return r;
+                    return sbErrorFromResponse(r).then(function(e) {
+                        throw e;
+                    });
                 });
             }
 
@@ -27608,9 +27626,13 @@
                     }),
                     body: JSON.stringify(records)
                 }).then(function(r) {
-                    if (!r.ok)
-                        throw new Error(r.status);
-                    callback && callback(null);
+                    if (r.ok) {
+                        callback && callback(null);
+                        return;
+                    }
+                    return sbErrorFromResponse(r).then(function(e) {
+                        throw e;
+                    });
                 }).catch(function(err) {
                     callback && callback(err);
                 });
@@ -27627,9 +27649,11 @@
                     }),
                     body: JSON.stringify(records)
                 }).then(function(r) {
-                    if (!r.ok)
-                        throw new Error('Supabase upsert HTTP ' + r.status);
-                    return r;
+                    if (r.ok)
+                        return r;
+                    return sbErrorFromResponse(r).then(function(e) {
+                        throw e;
+                    });
                 });
             }
 
@@ -28213,19 +28237,17 @@
                                 toast('⚠️ تعذّر الحذف من Supabase — حاول تاني لاحقاً', 'w');
                             });
                         } else if (opts.record) {
-                            sbUpsertRecord(opts.record).then(function(r) {
-                                if (!r.ok)
-                                    throw new Error(r.status);
+                            sbUpsertRecord(opts.record).then(function() {
                                 fbSetStatus(true);
-                            }).catch(function() {
+                            }).catch(function(err) {
                                 fbSetStatus(false);
-                                toast('⚠️ تعذّر الحفظ في Supabase — محفوظ محلياً مؤقتاً', 'w');
+                                toast('⚠️ تعذّر الحفظ: ' + (err && err.message || 'خطأ غير معروف'), 'w');
                             });
                         } else if (opts.bulk) {
                             sbBulkUpsertRecords(opts.bulk, function(err) {
                                 fbSetStatus(!err);
                                 if (err)
-                                    toast('⚠️ تعذّر رفع كل السجلات لـ Supabase', 'w');
+                                    toast('⚠️ تعذّر رفع السجلات: ' + (err.message || err), 'w');
                             });
                         }
                         // ملحوظة: لو saveDB() اتنادت من غير record/deletedId/bulk محدد
