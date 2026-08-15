@@ -27790,8 +27790,29 @@
                 return out;
             }
 
+            // إزالة التكرارات داخل نفس الدفعة قبل on_conflict.
+            // Supabase يرفض أن تحاول الدفعة نفسها تحديث الصف نفسه مرتين.
+            function sbDedupeRecords(records) {
+                var out = [];
+                var positions = Object.create(null);
+                (Array.isArray(records) ? records : []).forEach(function(rec) {
+                    var code = String(rec && rec.code || '').trim();
+                    var date = String(rec && rec.inspection_date || '').trim();
+                    var id = rec && rec.id !== null && rec.id !== undefined && rec.id !== '' ? String(rec.id) : '';
+                    var key = code && date ? 'code_date:' + code + '|' + date : (id ? 'id:' + id : '');
+                    if (key && Object.prototype.hasOwnProperty.call(positions, key)) {
+                        // آخر سجل هو الأحدث غالبًا، لذلك يغلب النسخة السابقة.
+                        out[positions[key]] = rec;
+                    } else {
+                        if (key) positions[key] = out.length;
+                        out.push(rec);
+                    }
+                });
+                return out;
+            }
+
             function sbNormalizeRecords(records) {
-                return (Array.isArray(records) ? records : []).map(sbNormalizeRecord).filter(Boolean);
+                return sbDedupeRecords((Array.isArray(records) ? records : []).map(sbNormalizeRecord).filter(Boolean));
             }
 
             function sbUpsertRecord(rec) {
